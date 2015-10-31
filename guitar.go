@@ -115,18 +115,18 @@ func (guitar *SimpleGuitar) currentNote() Note {
 
 func (guitar *SimpleGuitar) currentTone() int {
 	switch {
-	case guitar.match(false, false, false, false, false): return TONE_C
-	case guitar.match(true, false, false, false, false): return TONE_CS
-	case guitar.match(true, true, false, false, false): return TONE_D
-	case guitar.match(false, true, false, false, false): return TONE_DS
-	case guitar.match(false, true, true, false, false): return TONE_E
+	case guitar.match(true, false, false, false, false): return TONE_C
+	case guitar.match(true, true, false, false, false): return TONE_CS
+	case guitar.match(false, true, false, false, false): return TONE_D
+	case guitar.match(false, true, true, false, false): return TONE_DS
+	case guitar.match(false, false, false, false, false): return TONE_E
 	case guitar.match(false, false, true, false, false): return TONE_F
 	case guitar.match(false, false, true, true, false): return TONE_FS
 	case guitar.match(false, false, false, true, false): return TONE_G
 	case guitar.match(false, false, false, true, true): return TONE_GS
 	case guitar.match(false, false, false, false, true): return TONE_A
-	case guitar.match(true, false, true, false, false): return TONE_AS
-	case guitar.match(false, true, false, true, false): return TONE_B
+	case guitar.match(false, false, true, false, true): return TONE_AS
+	case guitar.match(true, false, true, false, false): return TONE_B
 	}
 	return TONE_C
 }
