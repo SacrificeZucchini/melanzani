@@ -50,14 +50,19 @@ type SimpleGuitar struct {
 	orange ButtonState
 	note Note
 	strum uint
+	octave int
+	echo bool
+	variety int /* +1 = normal | -1 = bass | 0 = equi */
 	midi *MidiOutput
 }
 
-func (guitar *SimpleGuitar) reset() {
+func (guitar *SimpleGuitar) Reset() {
 	var now syscall.Timeval
 	syscall.Gettimeofday(&now)
 	defaultButtonState := ButtonState {now, false}
 
+	guitar.octave = 2
+	guitar.variety = 1
 	guitar.green = defaultButtonState
 	guitar.red = defaultButtonState
 	guitar.yellow = defaultButtonState
@@ -73,10 +78,21 @@ func now() syscall.Timeval {
 
 func (guitar *SimpleGuitar) PressButton(buttonType int) {
 	guitar.changeButtonState(buttonType, true)
+	guitar.checkMute();
 }
 
 func (guitar *SimpleGuitar) ReleaseButton(buttonType int) {
 	guitar.changeButtonState(buttonType, false)
+}
+
+func (guitar *SimpleGuitar) checkMute() {
+	if guitar.echo && (
+		guitar.match(true, true, true, false, false) ||
+		guitar.match(false, true, true, true, false) ||
+		guitar.match(false, false, true, true, true)) {
+		
+		guitar.stopPlayingNote()
+	}
 }
 
 func (guitar *SimpleGuitar) changeButtonState(buttonType int, state bool) {
@@ -90,27 +106,33 @@ func (guitar *SimpleGuitar) changeButtonState(buttonType int, state bool) {
 }
 
 func (guitar *SimpleGuitar) StrumDown() {
-	guitar.midi.StopPlayingNote(guitar.note)
+	guitar.stopPlayingNote()
 	guitar.strum = STRUM_DOWN
 	guitar.note = guitar.currentNote()
 	guitar.midi.StartPlayingNote(guitar.note)
 }
 
 func (guitar *SimpleGuitar) StrumUp() {
-	guitar.midi.StopPlayingNote(guitar.note)
+	guitar.stopPlayingNote()
 	guitar.strum = STRUM_UP
 	guitar.note = guitar.currentNote()
-	guitar.note.octave += 1
+	guitar.note.octave += guitar.variety
 	guitar.midi.StartPlayingNote(guitar.note)
 }
 
 func (guitar *SimpleGuitar) ReleaseStrum() {
+	if !guitar.echo {
+		guitar.stopPlayingNote()
+	}
 	guitar.strum = STRUM_NONE
+}
+
+func (guitar *SimpleGuitar) stopPlayingNote() {
 	guitar.midi.StopPlayingNote(guitar.note)
 }
 
 func (guitar *SimpleGuitar) currentNote() Note {
-	return Note{guitar.currentTone(), 3}
+	return Note{guitar.currentTone(), guitar.octave}
 }
 
 func (guitar *SimpleGuitar) currentTone() int {
@@ -140,3 +162,35 @@ func (guitar *SimpleGuitar) match(
 		guitar.blue.pressed == blue &&
 		guitar.orange.pressed == orange
 }
+
+func (guitar *SimpleGuitar) Start() {
+	if guitar.match(true, false, false, false, false) {
+		guitar.variety = 1
+	} else if guitar.match(false, true, false, false, false) {
+		guitar.variety = -1
+	} else if guitar.match(false, false, true, false, false) {
+		guitar.variety = 0
+	} else if guitar.match(false, false, false, false, false) {
+		if guitar.echo {
+			guitar.stopPlayingNote()
+		}
+		guitar.echo = !guitar.echo
+	}
+}
+
+func (guitar *SimpleGuitar) Select() {
+
+}
+
+func (guitar *SimpleGuitar) Main() {
+
+}
+
+func (guitar *SimpleGuitar) OctaveUp() {
+	guitar.octave = guitar.octave + 1
+}
+
+func (guitar *SimpleGuitar) OctaveDown() {
+	guitar.octave = guitar.octave - 1
+}
+

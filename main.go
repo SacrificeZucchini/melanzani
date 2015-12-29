@@ -29,6 +29,7 @@ func main() {
 	settings := parseCommandLine(args)
 	midi := MidiOutput{initPortMidi()}
 	guitar := SimpleGuitar{}
+	guitar.Reset()
 	guitar.midi = &midi
 	device := initDevice(&guitar, &midi, settings)
 	device.StartListening()
@@ -52,7 +53,12 @@ func initPortMidi() *portmidi.Stream {
 	deviceCount := portmidi.CountDevices()
 	fmt.Println("Number of MIDI devices: ", deviceCount)
 
-	dev := portmidi.DeviceId(deviceCount - 1)
+	dev := portmidi.DeviceId(3 - 1)
+
+	for i := 0; i < deviceCount; i++ {
+	    id := portmidi.DeviceId(i)
+	    fmt.Println("Index ", i, "Id", id, " Device ", *portmidi.GetDeviceInfo(id))
+	}
 
 	out, err := portmidi.NewOutputStream(dev, 0, 0)
 	if err == nil {

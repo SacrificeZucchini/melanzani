@@ -39,4 +39,9 @@ type Instrument interface {
 	StrumUp()
 	StrumDown()
 	ReleaseStrum()
+	Start()
+	Select()
+	Main()
+	OctaveUp()
+	OctaveDown()
 }

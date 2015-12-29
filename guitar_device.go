@@ -87,12 +87,30 @@ func (self *GuitarDevice) listen() {
 		case evdev.BTN_Y:
 			button = BUTTON_ORANGE
 		case evdev.KEY_W:
-			if (event.Value == 1) {
+			if event.Value == 1 {
 				self.instrument.StrumDown()
-			} else if (event.Value == -1) {
+			} else if event.Value == -1 {
 				self.instrument.StrumUp()
 			} else {
 				self.instrument.ReleaseStrum()
+			}
+		case evdev.KEY_Q:
+			if event.Value == -1 {
+				self.instrument.OctaveUp()
+			} else if event.Value == 1 {
+				self.instrument.OctaveDown()
+			}
+		case evdev.BTN_TL2:
+			if event.Value == 1 {
+				self.instrument.Select()
+			}
+		case evdev.BTN_TR2:
+			if event.Value == 1 {
+				self.instrument.Start()
+			}
+		case evdev.BTN_MODE:
+			if event.Value == 1 {
+				self.instrument.Main()
 			}
 		case evdev.MSC_SCAN:
 		case evdev.EV_SYN:
