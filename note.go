@@ -33,11 +33,88 @@ const (
 	TONE_B = 11
 )
 
+const (
+	CHORD_C1 = iota
+	CHORD_C2 = iota
+        CHORD_D1 = iota
+        CHORD_D2 = iota
+        CHORD_E1 = iota
+        CHORD_E2 = iota
+        CHORD_F1 = iota
+        CHORD_F2 = iota
+        CHORD_G1 = iota
+        CHORD_G2 = iota
+        CHORD_A1 = iota
+        CHORD_A2 = iota
+        CHORD_B1 = iota
+        CHORD_B2 = iota
+	CHORD_NONE = iota
+)
+
+var CHORD_NAME []string = []string {
+	"CHORD_C1",
+	"CHORD_C2",
+	"CHORD_D1",
+	"CHORD_D2",
+	"CHORD_E1",
+	"CHORD_E2",
+	"CHORD_F1",
+	"CHORD_F2",
+	"CHORD_G1",
+	"CHORD_G2",
+	"CHORD_A1",
+	"CHORD_A2",
+	"CHORD_B1",
+	"CHORD_B2",
+}
+
+const (
+	CT_BASE = iota
+	CT_MAJOR = iota
+	CT_MINOR = iota
+	CT_MAJOR7 = iota
+	CT_MINOR7 = iota
+	CT_MINOR7FF = iota
+	CT_DOMINANT7 = iota
+	CT_DIMINISHED = iota
+)
+
+func ChordToTone(chord int) int {
+	switch(chord) {
+	case CHORD_C1: return TONE_C
+	case CHORD_C2: return TONE_CS
+	case CHORD_D1: return TONE_D
+	case CHORD_D2: return TONE_DS
+	case CHORD_E1: return TONE_E
+	case CHORD_E2: return TONE_E
+	case CHORD_F1: return TONE_F
+	case CHORD_F2: return TONE_FS
+	case CHORD_G1: return TONE_G
+	case CHORD_G2: return TONE_GS
+	case CHORD_A1: return TONE_A
+	case CHORD_A2: return TONE_AS
+	case CHORD_B1: return TONE_B
+	case CHORD_B2: return TONE_B
+	}
+	return TONE_C
+}
+
 type Note struct {
 	tone int
 	octave int
 }
 
 func (note Note) ToMidiCode() int {
-	return (note.octave + 1) * 12 + note.tone
+        return (note.octave + 1) * 12 + note.tone
+}
+
+
+type MidiSequence struct {
+	notes []Note
+}
+
+type Chord struct {
+        tone int
+        octave int
+        chord int
 }

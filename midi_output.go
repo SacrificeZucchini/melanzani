@@ -27,11 +27,23 @@ type MidiOutput struct {
 	stream *portmidi.Stream
 }
 
-func (midi *MidiOutput) StartPlayingNote(note Note) {
+func (midi *MidiOutput) StartPlayingSequence(sequence *MidiSequence) {
+	for _, note := range sequence.notes {
+		midi.startPlayingNote(note)
+	}
+}
+
+func (midi *MidiOutput) startPlayingNote(note Note) {
 	fmt.Println("MIDI: ", note.ToMidiCode())
 	midi.stream.WriteShort(0x90, int64(note.ToMidiCode()), 100)
 }
 
-func (midi *MidiOutput) StopPlayingNote(note Note) {
+func (midi *MidiOutput) StopPlayingSequence(sequence *MidiSequence) {
+	for _, note := range sequence.notes {
+		midi.stopPlayingNote(note)
+	}
+}
+
+func (midi *MidiOutput) stopPlayingNote(note Note) {
 	midi.stream.WriteShort(0x80, int64(note.ToMidiCode()), 100)
 }

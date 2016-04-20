@@ -31,17 +31,17 @@ const (
 	BUTTON_YELLOW = iota
 	BUTTON_BLUE = iota
 	BUTTON_ORANGE = iota
+	BUTTON_START = iota
+	BUTTON_SELECT = iota
+	BUTTON_MAIN = iota
 )
 
 type Instrument interface {
 	PressButton(buttonType int)
 	ReleaseButton(buttonType int)
+	Up()
+	Down()	
 	StrumUp()
 	StrumDown()
 	ReleaseStrum()
-	Start()
-	Select()
-	Main()
-	OctaveUp()
-	OctaveDown()
 }

@@ -27,32 +27,18 @@ type ButtonState struct {
 	pressed bool
 }
 
-/*
-Standard Notes
-  D     C
-  GD    C#
-  GRD   D
-  RD    D#
-  RYD   E
-  YD    F
-  YBD   F#
-  BD    G
-  BOD   G#
-  OD    A
-  GYD   A#
-  RBD   B
-*/
 type SimpleGuitar struct {
 	green ButtonState
 	red ButtonState
 	yellow ButtonState
 	blue ButtonState
 	orange ButtonState
-	note Note
+	start ButtonState
+	sel ButtonState
+	main ButtonState
+	mode GuitarMode
 	strum uint
-	octave int
-	echo bool
-	variety int /* +1 = normal | -1 = bass | 0 = equi */
+	chordMap *ChordMap
 	midi *MidiOutput
 }
 
@@ -61,13 +47,21 @@ func (guitar *SimpleGuitar) Reset() {
 	syscall.Gettimeofday(&now)
 	defaultButtonState := ButtonState {now, false}
 
-	guitar.octave = 2
-	guitar.variety = 1
 	guitar.green = defaultButtonState
 	guitar.red = defaultButtonState
 	guitar.yellow = defaultButtonState
 	guitar.blue = defaultButtonState
 	guitar.orange = defaultButtonState
+	guitar.start = defaultButtonState
+	guitar.sel = defaultButtonState
+	guitar.main = defaultButtonState
+	guitar.strum = STRUM_NONE
+
+	guitar.chordMap = &ChordMap{}
+	guitar.chordMap.Init()
+
+	guitar.mode = &SimpleGuitarMode{}
+	guitar.mode.EnterMode(guitar)
 }
 
 func now() syscall.Timeval {
@@ -78,79 +72,95 @@ func now() syscall.Timeval {
 
 func (guitar *SimpleGuitar) PressButton(buttonType int) {
 	guitar.changeButtonState(buttonType, true)
-	guitar.checkMute();
 }
 
 func (guitar *SimpleGuitar) ReleaseButton(buttonType int) {
 	guitar.changeButtonState(buttonType, false)
 }
 
-func (guitar *SimpleGuitar) checkMute() {
-	if guitar.echo && (
+/*func (guitar *SimpleGuitar) checkMute() bool {
+	return guitar.echo && (
 		guitar.match(true, true, true, false, false) ||
 		guitar.match(false, true, true, true, false) ||
-		guitar.match(false, false, true, true, true)) {
-		
-		guitar.stopPlayingNote()
-	}
-}
+		guitar.match(false, false, true, true, true))
+}*/
 
 func (guitar *SimpleGuitar) changeButtonState(buttonType int, state bool) {
+	buttonState := ButtonState{now(), state}
 	switch buttonType {
-	case BUTTON_GREEN: guitar.green = ButtonState{now(), state}
-	case BUTTON_RED: guitar.red = ButtonState{now(), state}
-	case BUTTON_YELLOW: guitar.yellow = ButtonState{now(), state}
-	case BUTTON_BLUE: guitar.blue = ButtonState{now(), state}
-	case BUTTON_ORANGE: guitar.orange = ButtonState{now(), state}
+	case BUTTON_GREEN: guitar.green = buttonState
+	case BUTTON_RED: guitar.red = buttonState
+	case BUTTON_YELLOW: guitar.yellow = buttonState
+	case BUTTON_BLUE: guitar.blue = buttonState
+	case BUTTON_ORANGE: guitar.orange = buttonState
+	case BUTTON_START: guitar.start = buttonState
+	case BUTTON_SELECT: guitar.sel = buttonState
+	case BUTTON_MAIN: guitar.main = buttonState
+	}
+	if state {
+		guitar.mode.ButtonPressed(buttonType, buttonState)
+	} else {
+		guitar.mode.ButtonReleased(buttonType, buttonState)
 	}
 }
 
 func (guitar *SimpleGuitar) StrumDown() {
-	guitar.stopPlayingNote()
 	guitar.strum = STRUM_DOWN
-	guitar.note = guitar.currentNote()
-	guitar.midi.StartPlayingNote(guitar.note)
+	guitar.mode.StrumDown()
 }
 
 func (guitar *SimpleGuitar) StrumUp() {
-	guitar.stopPlayingNote()
 	guitar.strum = STRUM_UP
-	guitar.note = guitar.currentNote()
-	guitar.note.octave += guitar.variety
-	guitar.midi.StartPlayingNote(guitar.note)
+	guitar.mode.StrumUp()
 }
 
 func (guitar *SimpleGuitar) ReleaseStrum() {
-	if !guitar.echo {
-		guitar.stopPlayingNote()
-	}
 	guitar.strum = STRUM_NONE
+	guitar.mode.StrumReleased()
 }
 
-func (guitar *SimpleGuitar) stopPlayingNote() {
-	guitar.midi.StopPlayingNote(guitar.note)
+func (guitar *SimpleGuitar) Up() {
+	guitar.mode.Up()
 }
 
-func (guitar *SimpleGuitar) currentNote() Note {
-	return Note{guitar.currentTone(), guitar.octave}
+func (guitar *SimpleGuitar) Down() {
+	guitar.mode.Down()
 }
 
-func (guitar *SimpleGuitar) currentTone() int {
-	switch {
-	case guitar.match(true, false, false, false, false): return TONE_C
-	case guitar.match(true, true, false, false, false): return TONE_CS
-	case guitar.match(false, true, false, false, false): return TONE_D
-	case guitar.match(false, true, true, false, false): return TONE_DS
-	case guitar.match(false, false, false, false, false): return TONE_E
-	case guitar.match(false, false, true, false, false): return TONE_F
-	case guitar.match(false, false, true, true, false): return TONE_FS
-	case guitar.match(false, false, false, true, false): return TONE_G
-	case guitar.match(false, false, false, true, true): return TONE_GS
-	case guitar.match(false, false, false, false, true): return TONE_A
-	case guitar.match(false, false, true, false, true): return TONE_AS
-	case guitar.match(true, false, true, false, false): return TONE_B
+func (guitar *SimpleGuitar) ModeSwitch(mode int) {
+	if guitar.mode != nil {
+		guitar.mode.ExitMode()
 	}
-	return TONE_C
+
+	if mode == 0 {
+		guitar.mode = &SimpleGuitarMode{}
+	} else if mode == 1 {
+		guitar.mode = &SoloGuitarMode{}
+	} else if mode == 2 {
+		guitar.mode = &ConfigurationGuitarMode{}
+	}
+	guitar.mode.EnterMode(guitar)
+}
+
+func (guitar *SimpleGuitar) ProduceChord() int {
+	switch {
+	case guitar.match(true, false, false, false, false): return CHORD_C1
+        case guitar.match(true, true, false, false, false): return CHORD_C2
+        case guitar.match(false, true, false, false, false): return CHORD_D1
+        case guitar.match(false, true, true, false, false): return CHORD_D2
+        case guitar.match(false, false, false, false, false): return CHORD_E1
+	case guitar.match(true, false, true, true, false): return CHORD_E2
+        case guitar.match(false, false, true, false, false): return CHORD_F1
+        case guitar.match(false, false, true, true, false): return CHORD_F2
+        case guitar.match(false, false, false, true, false): return CHORD_G1
+        case guitar.match(false, false, false, true, true): return CHORD_G2
+        case guitar.match(false, false, false, false, true): return CHORD_A1
+        case guitar.match(false, false, true, false, true): return CHORD_A2
+        case guitar.match(true, false, true, false, false): return CHORD_B1
+	case guitar.match(false, true, false, true, false): return CHORD_B2
+	case guitar.match(false, false, true, true, true): return CHORD_B1
+	}
+	return CHORD_C1
 }
 
 func (guitar *SimpleGuitar) match(
@@ -162,35 +172,3 @@ func (guitar *SimpleGuitar) match(
 		guitar.blue.pressed == blue &&
 		guitar.orange.pressed == orange
 }
-
-func (guitar *SimpleGuitar) Start() {
-	if guitar.match(true, false, false, false, false) {
-		guitar.variety = 1
-	} else if guitar.match(false, true, false, false, false) {
-		guitar.variety = -1
-	} else if guitar.match(false, false, true, false, false) {
-		guitar.variety = 0
-	} else if guitar.match(false, false, false, false, false) {
-		if guitar.echo {
-			guitar.stopPlayingNote()
-		}
-		guitar.echo = !guitar.echo
-	}
-}
-
-func (guitar *SimpleGuitar) Select() {
-
-}
-
-func (guitar *SimpleGuitar) Main() {
-
-}
-
-func (guitar *SimpleGuitar) OctaveUp() {
-	guitar.octave = guitar.octave + 1
-}
-
-func (guitar *SimpleGuitar) OctaveDown() {
-	guitar.octave = guitar.octave - 1
-}
-

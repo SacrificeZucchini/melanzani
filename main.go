@@ -29,8 +29,8 @@ func main() {
 	settings := parseCommandLine(args)
 	midi := MidiOutput{initPortMidi()}
 	guitar := SimpleGuitar{}
-	guitar.Reset()
 	guitar.midi = &midi
+	guitar.Reset()
 	device := initDevice(&guitar, &midi, settings)
 	device.StartListening()
 	shutDownPortMidi()
